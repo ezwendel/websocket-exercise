@@ -11,12 +11,20 @@ function App() {
 	useEffect(
 		() => {
 			socketRef.current = io.connect('http://localhost:4000');
-			socketRef.current.on('message', ({ name, message }) => {
-				setChat([ ...chat, { name, message } ]);
+			socketRef.current.on('message', ({ name, message, room }) => {
+				console.log("message", message)
+				console.log("name", name)
+				setChat([ ...chat, { name , message } ]);
 			});
-			socketRef.current.on('user_join', function(data) {
-				setChat([ ...chat, { name: 'ChatBot', message: `${data} has joined the chat` } ]);
+			socketRef.current.on('user_join', (data) => {
+				console.log("data",data)
+				console.log("chat",chat)
+				setChat([ ...chat, { name: 'ChatBot', message: `${data.name} has joined the chat` } ]);
 			});
+
+			socketRef.current.on('connection', function () {
+				socketRef.current.emit('join_room', {room: state.room})
+			})
 			// socketRef.current.on('user_leave', function(data) {
 			// 	console.log('data', data);
 			// 	//setChat([ ...chat, { name: 'ChatBot', message: data } ]);
@@ -27,8 +35,10 @@ function App() {
 		},
 		[ chat ]
 	);
-	const userjoin = (name) => {
-		socketRef.current.emit('user_join', name);
+	const userjoin = (name, room) => {
+		console.log("inuserjoin", name)
+		console.log("inuserjoin", room)
+		socketRef.current.emit('user_join', name, room);
 	};
 
 	const onMessageSubmit = (e) => {
@@ -42,7 +52,10 @@ function App() {
 		msgEle.focus();
 	};
 
-	const renderChat = () => {
+	const renderChat = (room) => {
+		// if (!chat[room]) {
+		// 	setChat({...chat, [room]: []})
+		// }
 		return chat.map(({ name, message }, index) => (
 			<div key={index}>
 				<h3>
@@ -58,7 +71,7 @@ function App() {
 				<div className='card'>
 					<div className='render-chat'>
 						<h1>Chat Log</h1>
-						{renderChat()}
+						{renderChat(state.room)}
 					</div>
 					<form onSubmit={onMessageSubmit}>
 						<h1>Messenger</h1>
@@ -75,9 +88,10 @@ function App() {
 					className='form'
 					onSubmit={(e) => {
 						console.log(document.getElementById('username_input').value);
+						console.log(document.getElementById('chatroom').value);
 						e.preventDefault();
-						setState({ name: document.getElementById('username_input').value });
-						userjoin(document.getElementById('username_input').value);
+						setState({ name: document.getElementById('username_input').value, room: document.getElementById('chatroom').value });
+						userjoin(document.getElementById('username_input').value, document.getElementById('chatroom').value);
 						// userName.value = '';
 					}}
 				>
@@ -89,10 +103,10 @@ function App() {
 						</label>
 					</div>
 
-					<label for="cars">Choose a car:</label>
+					<label for="chatroom">Choose a chatroom:</label>
 
-					<select name="cars" id="cars">
-					<option value="volvo">Volvo</option>
+					<select name="chatroom" id="chatroom">
+					<option selected value="volvo">Volvo</option>
 					<option value="saab">Saab</option>
 					<option value="mercedes">Mercedes</option>
 					<option value="audi">Audi</option>
